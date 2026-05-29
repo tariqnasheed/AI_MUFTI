@@ -1,0 +1,6 @@
+# Dependencies for the AI-MUFTI conversational web application.
+
+flask                        # Web framework (routes, sessions)
+langchain                    # Core chain building
+langchain-google-genai      # Google Gemini chat model
+python-dotenv                # Load API keys from .env file

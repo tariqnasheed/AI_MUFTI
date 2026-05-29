@@ -1,0 +1,170 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-MUFTI</title>
+    <!-- Google Fonts for decorative header and calligraphic subtitle -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Rochester&family=Georgia&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+</head>
+<body>
+    <!-- Header with book/mosque icons -->
+    <div class="header-container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="header-logo">
+        <div class="header-icon">📖🕌</div>
+        <div class="header-title">AI-MUFTI</div>
+    </div>
+    <div class="subtitle">
+        Ask questions about the Noble Quran and Islamic history.<br>
+    </div>
+
+    <!-- New descriptive text about what can be asked -->
+    <div class="info-text">
+        You can ask about anything regarding the Quran, Hadiths,<br>
+        Islamic history events, or any general Islamic knowledge.
+    </div>
+
+    <!-- Main container -->
+    <div class="main-container">
+        <!-- Chat area where Q&A cards appear -->
+        <div class="chat-area" id="chatArea"></div>
+
+        <!-- Input area -->
+        <div class="input-area">
+            <textarea id="questionInput"
+                      placeholder="e.g., What is the meaning of Tawheed?"
+                      rows="3"></textarea>
+            <button id="askButton" onclick="askQuestion()">🔍 Ask AI-MUFTI</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        AI-MUFTI | Powered by Google Gemini | Deoband School of Thought
+    </div>
+
+    <script>
+        // ------------------------------------------------
+        // Load session history when page opens
+        document.addEventListener("DOMContentLoaded", loadHistory);
+
+        async function loadHistory() {
+            try {
+                const response = await fetch("/history");
+                const history = await response.json();
+                const chatArea = document.getElementById("chatArea");
+                chatArea.innerHTML = "";
+                history.forEach((entry, index) => {
+                    addQACard(entry.question, entry.answer, entry.sources);
+                });
+                chatArea.scrollTop = chatArea.scrollHeight;
+            } catch (error) {
+                console.error("Failed to load history:", error);
+            }
+        }
+
+        // ------------------------------------------------
+        // Send a new question
+        async function askQuestion() {
+            const questionInput = document.getElementById("questionInput");
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            // Show "thinking" indicator
+            const chatArea = document.getElementById("chatArea");
+            const thinkingDiv = document.createElement("div");
+            thinkingDiv.className = "qa-card";
+            thinkingDiv.innerHTML = "<em>Consulting Islamic knowledge...</em>";
+            chatArea.appendChild(thinkingDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            try {
+                const response = await fetch("/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: question })
+                });
+                const data = await response.json();
+
+                // Remove thinking indicator
+                chatArea.removeChild(thinkingDiv);
+
+                // Add the Q&A card
+                addQACard(question, data.answer, data.sources);
+
+                // Clear input
+                questionInput.value = "";
+                // Scroll to bottom
+                chatArea.scrollTop = chatArea.scrollHeight;
+            } catch (error) {
+                chatArea.removeChild(thinkingDiv);
+                alert("Error connecting to the server.");
+            }
+        }
+
+        // ------------------------------------------------
+        // Create a Q&A card and append it to the chat area
+        function addQACard(question, answer, sources) {
+            const chatArea = document.getElementById("chatArea");
+            const card = document.createElement("div");
+            card.className = "qa-card";
+
+            // Build reference list if present
+            let sourcesHtml = "";
+            if (sources && sources.length > 0) {
+                sourcesHtml = '<div class="sources-box"><strong>📚 References:</strong><ul>';
+                sources.forEach(ref => {
+                    sourcesHtml += `<li>${escapeHtml(ref)}</li>`;
+                });
+                sourcesHtml += '</ul></div>';
+            }
+
+            card.innerHTML = `
+                <div class="question-box">❓ ${escapeHtml(question)}</div>
+                <div class="answer-box">${escapeHtml(answer)}</div>
+                ${sourcesHtml}
+                <div class="action-buttons">
+                    <button onclick="printCard(this)" class="print-btn">🖨️ Print</button>
+                </div>
+            `;
+            chatArea.appendChild(card);
+        }
+
+        // ------------------------------------------------
+        // Print a single Q&A card
+        function printCard(button) {
+            const card = button.closest(".qa-card");
+            const printWindow = window.open("", "_blank");
+            printWindow.document.write(`
+                <html>
+                <head><title>AI-MUFTI Answer</title>
+                <style>
+                    body { font-family: Georgia, serif; padding: 20px; }
+                    .question-box { font-weight: bold; margin-bottom: 15px; }
+                    .answer-box { line-height: 1.6; margin-bottom: 15px; }
+                    .sources-box { margin-top: 10px; font-style: italic; }
+                    ul { padding-left: 20px; }
+                </style>
+                </head>
+                <body>${card.innerHTML}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // ------------------------------------------------
+        // Helper: escape HTML characters to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.appendChild(document.createTextNode(text));
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
