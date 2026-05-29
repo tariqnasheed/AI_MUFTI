@@ -1,6 +1,6 @@
-# app.py
+# ai_mufti_app.py
 # Flask web application for AI-MUFTI – Islamic Q&A Bot.
-# Uses Google Gemini (no PDFs) with conversational memory.
+# Uses Google Gemini with conversational memory.
 # Answers follows proper references (Quran surah/verses, Sahih Hadith with book/number).
 # Features: session‑based chat history, print, save.
 
